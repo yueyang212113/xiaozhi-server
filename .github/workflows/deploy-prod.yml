@@ -82,7 +82,7 @@ jobs:
         with:
           host: ${{ secrets.ECS_HOST }}
           username: ${{ secrets.ECS_SSH_USER }}
-          key: ${{ secrets.ECS_SSH_KEY }}
+          password: ${{ secrets.ECS_SSH_PASSWORD }}
           script_stop: true
           command_timeout: 5m
           script: |
