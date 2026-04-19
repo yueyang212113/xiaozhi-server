@@ -3,9 +3,8 @@ FROM node:18-alpine AS builder
 RUN apk add --no-cache git
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
-COPY main/manager-mobile/package.json main/manager-mobile/pnpm-lock.yaml ./
-RUN pnpm install --no-frozen-lockfile
 COPY main/manager-mobile/ .
+RUN pnpm install --no-frozen-lockfile
 RUN pnpm build:h5
 
 # 第二阶段：Nginx 运行
