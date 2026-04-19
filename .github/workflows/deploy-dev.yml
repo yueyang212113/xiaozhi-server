@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  ACR_REGISTRY: ${{ secrets.ALIYUN_ACR_REGISTRY }}
-  ACR_NAMESPACE: ${{ secrets.ALIYUN_ACR_NAMESPACE }}
-
 jobs:
   build-and-deploy:
     name: Build & Deploy Dev
@@ -39,8 +35,8 @@ jobs:
           file: Dockerfile-server
           push: true
           tags: |
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-server:dev-${{ steps.sha.outputs.SHORT }}
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-server:dev-latest
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ secrets.ALIYUN_ACR_NAMESPACE }}/xiaozhi-server:dev-${{ steps.sha.outputs.SHORT }}
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ secrets.ALIYUN_ACR_NAMESPACE }}/xiaozhi-server:dev-latest
           cache-from: type=gha,scope=xiaozhi-server
           cache-to: type=gha,mode=max,scope=xiaozhi-server
 
@@ -51,8 +47,8 @@ jobs:
           file: Dockerfile-web
           push: true
           tags: |
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-web:dev-${{ steps.sha.outputs.SHORT }}
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-web:dev-latest
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ secrets.ALIYUN_ACR_NAMESPACE }}/xiaozhi-manager-web:dev-${{ steps.sha.outputs.SHORT }}
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ secrets.ALIYUN_ACR_NAMESPACE }}/xiaozhi-manager-web:dev-latest
           cache-from: type=gha,scope=manager-web
           cache-to: type=gha,mode=max,scope=manager-web
 
@@ -63,8 +59,8 @@ jobs:
           file: Dockerfile-mobile
           push: true
           tags: |
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-mobile:dev-${{ steps.sha.outputs.SHORT }}
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-mobile:dev-latest
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ secrets.ALIYUN_ACR_NAMESPACE }}/xiaozhi-manager-mobile:dev-${{ steps.sha.outputs.SHORT }}
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ secrets.ALIYUN_ACR_NAMESPACE }}/xiaozhi-manager-mobile:dev-latest
           cache-from: type=gha,scope=manager-mobile
           cache-to: type=gha,mode=max,scope=manager-mobile
 
