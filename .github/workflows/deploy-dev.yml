@@ -1,0 +1,83 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ACR_REGISTRY: ${{ secrets.ALIYUN_ACR_REGISTRY }}
+  ACR_NAMESPACE: ${{ secrets.ALIYUN_ACR_NAMESPACE }}
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ALIYUN_ACR_REGISTRY }}
+          username: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+
+      - name: Extract short SHA
+        id: sha
+        run: echo "SHORT=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Build and push xiaozhi-server
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile-server
+          push: true
+          tags: |
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-server:dev-${{ steps.sha.outputs.SHORT }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-server:dev-latest
+          cache-from: type=gha,scope=xiaozhi-server
+          cache-to: type=gha,mode=max,scope=xiaozhi-server
+
+      - name: Build and push manager-web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile-web
+          push: true
+          tags: |
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-web:dev-${{ steps.sha.outputs.SHORT }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-web:dev-latest
+          cache-from: type=gha,scope=manager-web
+          cache-to: type=gha,mode=max,scope=manager-web
+
+      - name: Build and push manager-mobile
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile-mobile
+          push: true
+          tags: |
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-mobile:dev-${{ steps.sha.outputs.SHORT }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/xiaozhi-manager-mobile:dev-latest
+          cache-from: type=gha,scope=manager-mobile
+          cache-to: type=gha,mode=max,scope=manager-mobile
+
+      - name: Deploy to ECS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_SSH_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            cd /opt/xiaozhi
+            export IMAGE_TAG=dev-latest
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+            echo "Deploy dev-${{ steps.sha.outputs.SHORT }} done"
