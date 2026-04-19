@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: xiaozhi-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: xiaozhi_esp32_server
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: xiaozhi-redis
+    restart: always
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  xiaozhi-server:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/xiaozhi-server:${IMAGE_TAG}
+    container_name: xiaozhi-server
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+      - "8003:8003"
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data/xiaozhi-server/data:/opt/xiaozhi-esp32-server/data
+      - ./data/xiaozhi-server/models:/opt/xiaozhi-esp32-server/models
+
+  manager-web:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/xiaozhi-manager-web:${IMAGE_TAG}
+    container_name: xiaozhi-manager-web
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    environment:
+      - TZ=Asia/Shanghai
+      - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://mysql:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+      - SPRING_DATASOURCE_DRUID_USERNAME=root
+      - SPRING_DATASOURCE_DRUID_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PASSWORD=
+      - SPRING_DATA_REDIS_PORT=6379
+    volumes:
+      - ./data/uploadfile:/uploadfile
+
+  manager-mobile:
+    image: ${ACR_REGISTRY}/${ACR_NAMESPACE}/xiaozhi-manager-mobile:${IMAGE_TAG}
+    container_name: xiaozhi-manager-mobile
+    restart: always
+    ports:
+      - "9000:80"
+    environment:
+      - TZ=Asia/Shanghai
