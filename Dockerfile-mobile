@@ -1,5 +1,6 @@
 # 第一阶段：构建 H5 产物
 FROM node:18-alpine AS builder
+RUN apk add --no-cache git
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY main/manager-mobile/package.json main/manager-mobile/pnpm-lock.yaml ./
