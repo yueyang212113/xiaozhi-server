@@ -15,9 +15,16 @@ def check_config_file():
     """
     custom_config_file = get_project_dir() + "data/." + default_config_file
     if not os.path.exists(custom_config_file):
-        raise FileNotFoundError(
-            "找不到data/.config.yaml文件，请按教程确认该配置文件是否存在"
-        )
+        default_config_path = get_project_dir() + default_config_file
+        if os.path.exists(default_config_path):
+            os.makedirs(os.path.dirname(custom_config_file), exist_ok=True)
+            import shutil
+            shutil.copy2(default_config_path, custom_config_file)
+            print(f"已自动从 {default_config_file} 生成 data/.config.yaml，请根据需要修改配置")
+        else:
+            raise FileNotFoundError(
+                "找不到配置文件，请确认 config.yaml 是否存在"
+            )
 
     # 检查是否从API读取配置
     config = load_config()
