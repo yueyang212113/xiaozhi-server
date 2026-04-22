@@ -6,9 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy Dev
+  build:
+    name: Build & Push
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -64,16 +67,22 @@ jobs:
           cache-from: type=gha,scope=manager-mobile
           cache-to: type=gha,mode=max,scope=manager-mobile
 
-      - name: Deploy to ECS via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.ECS_HOST }}
-          username: ${{ secrets.ECS_SSH_USER }}
-          password: ${{ secrets.ECS_SSH_PASSWORD }}
-          script: |
-            cd /opt/xiaozhi
-            export IMAGE_TAG=dev-latest
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
-            echo "Deploy dev-${{ steps.sha.outputs.SHORT }} done"
+  deploy:
+    name: Deploy to 192.168.1.75
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Login to Aliyun ACR
+        run: echo "${{ secrets.ALIYUN_ACR_PASSWORD }}" | docker login --username ${{ secrets.ALIYUN_ACR_USERNAME }} --password-stdin ${{ secrets.ALIYUN_ACR_REGISTRY }}
+
+      - name: Pull and deploy
+        run: |
+          cd /opt/xiaozhi
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker image prune -f
+
+      - name: Verify
+        run: |
+          sleep 10
+          docker compose -f /opt/xiaozhi/docker-compose.yml ps

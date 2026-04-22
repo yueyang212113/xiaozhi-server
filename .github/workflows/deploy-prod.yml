@@ -10,9 +10,12 @@ on:
         required: true
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy Prod
+  build:
+    name: Build & Push
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -73,23 +76,22 @@ jobs:
           cache-from: type=gha,scope=manager-mobile
           cache-to: type=gha,mode=max,scope=manager-mobile
 
-      - name: Deploy to ECS via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.ECS_HOST }}
-          username: ${{ secrets.ECS_SSH_USER }}
-          password: ${{ secrets.ECS_SSH_PASSWORD }}
-          script_stop: true
-          command_timeout: 5m
-          script: |
-            cd /opt/xiaozhi
-            export IMAGE_TAG=${{ steps.version.outputs.TAG }}
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  deploy:
+    name: Deploy to 192.168.1.75
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Login to Aliyun ACR
+        run: echo "${{ secrets.ALIYUN_ACR_PASSWORD }}" | docker login --username ${{ secrets.ALIYUN_ACR_USERNAME }} --password-stdin ${{ secrets.ALIYUN_ACR_REGISTRY }}
+
+      - name: Pull and deploy
+        run: |
+          cd /opt/xiaozhi
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker image prune -f
 
       - name: Health check
         run: |
           sleep 30
-          curl -sf http://${{ secrets.ECS_HOST }}:8002/xiaozhi/doc.html -o /dev/null && echo "manager-web OK" || echo "manager-web FAIL"
-          curl -sf http://${{ secrets.ECS_HOST }}:9000/ -o /dev/null && echo "mobile OK" || echo "mobile FAIL"
+          curl -sf http://192.168.1.75:8002/xiaozhi/doc.html -o /dev/null && echo "manager-web OK" || echo "manager-web FAIL"
